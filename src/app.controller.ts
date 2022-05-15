@@ -12,7 +12,9 @@ export class AppController {
 
   @Get('reload')
   async init(): Promise<string> {
-    return await this.getAccessToken();
+    const token = await this.getAccessToken();
+    await this.cacheManager.set('token', token, { ttl: 7200 });
+    return token;
   }
 
   @Get()
