@@ -3,7 +3,7 @@ import { Cache } from 'cache-manager';
 import { AppService } from './app.service';
 import axios from 'axios';
 
-@Controller()
+@Controller('allocator')
 export class AppController {
   constructor(
     private readonly appService: AppService,
