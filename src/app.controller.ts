@@ -34,7 +34,6 @@ export class AppController {
     const appId = body.appId;
     const secret = body.secret;
 
-    console.error(body);
     const hash = this.sha1(`${appId}${secret}`);
 
     const value = await this.cacheManager.get(hash);
