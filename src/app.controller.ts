@@ -1,11 +1,4 @@
-import {
-  Body,
-  CACHE_MANAGER,
-  Controller,
-  Get,
-  Inject,
-  Post,
-} from '@nestjs/common';
+import { Body, CACHE_MANAGER, Controller, Inject, Post } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import { AppService } from './app.service';
 import axios from 'axios';
@@ -40,6 +33,8 @@ export class AppController {
   async main(@Body() body: MainDTO): Promise<string> {
     const appId = body.appId;
     const secret = body.secret;
+
+    console.error(body);
     const hash = this.sha1(`${appId}${secret}`);
 
     const value = await this.cacheManager.get(hash);
