@@ -1,7 +1,16 @@
-import { CACHE_MANAGER, Controller, Get, Inject } from '@nestjs/common';
+import {
+  Body,
+  CACHE_MANAGER,
+  Controller,
+  Get,
+  Inject,
+  Post,
+} from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import { AppService } from './app.service';
 import axios from 'axios';
+import { MainDTO } from './dto/main.dto';
+import * as crypto from 'crypto';
 
 @Controller('allocator')
 export class AppController {
@@ -10,29 +19,41 @@ export class AppController {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  @Get('reload')
-  async init(): Promise<string> {
-    const token = await this.getAccessToken();
-    await this.cacheManager.set('token', token, { ttl: 7200 });
+  // 主动刷新
+  @Post('reload')
+  async init(@Body() body: MainDTO): Promise<string> {
+    const appId = body.appId;
+    const secret = body.secret;
+    const hash = this.sha1(`${appId}${secret}`);
+
+    const token = await this.getAccessToken(appId, secret);
+    await this.cacheManager.set(hash, token, { ttl: 7200 });
+
     return token;
   }
 
-  @Get()
-  async main(): Promise<string> {
-    const value = (await this.cacheManager.get('token')) as unknown as string;
+  sha1(payload: string) {
+    return crypto.createHash('sha1').update(payload).digest('hex');
+  }
+
+  @Post()
+  async main(@Body() body: MainDTO): Promise<string> {
+    const appId = body.appId;
+    const secret = body.secret;
+    const hash = this.sha1(`${appId}${secret}`);
+
+    const value = await this.cacheManager.get(hash);
     if (value) {
-      return value;
+      return value as unknown as string;
     }
 
-    const token = await this.getAccessToken();
-    await this.cacheManager.set('token', token, { ttl: 7200 });
+    const token = await this.getAccessToken(appId, secret);
+    await this.cacheManager.set(hash, token, { ttl: 7200 });
 
     return token;
   }
 
-  async getAccessToken() {
-    const appId = process.env.WX_OPEN_APP_ID;
-    const appSecret = process.env.WX_OPEN_SECRET;
+  async getAccessToken(appId: string, secret: string) {
     const grantType = 'client_credential';
 
     const res = await axios({
@@ -41,7 +62,7 @@ export class AppController {
       params: {
         grant_type: grantType,
         appid: appId,
-        secret: appSecret,
+        secret,
       },
     }).then(
       (r) =>
